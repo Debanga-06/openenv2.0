@@ -8,6 +8,16 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 
+class ResetRequest(BaseModel):
+    """
+    Request model for the reset endpoint.
+    
+    Attributes:
+        task_id (Optional[str]): The task identifier ("easy", "medium", "hard")
+    """
+    task_id: Optional[str] = Field(default="medium", description="Task identifier (easy, medium, hard)")
+
+
 class State(BaseModel):
     """
     Represents the current state of the environment.

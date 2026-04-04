@@ -62,11 +62,14 @@ environment:
 # API endpoints
 endpoints:
   reset:
-    method: "GET"
+    method: "POST"
     path: "/reset"
-    description: "Reset environment to initial state"
+    description: "Reset environment to initial state based on task difficulty"
+    request:
+      task_id: "str (optional, 'easy', 'medium', 'hard')"
     response:
-      state: "int (initial waste level = 50)"
+      state: "int (initial waste level)"
+      task_id: "str (task identifier used)"
       done: "bool (False on reset)"
   
   step:
