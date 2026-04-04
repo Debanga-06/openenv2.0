@@ -5,7 +5,7 @@ This client demonstrates how to use the environment through REST API calls.
 """
 
 import requests
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 import json
 
 
@@ -32,51 +32,31 @@ class FoodWasteClient:
         
         Returns:
             dict: Health status information
-        
-        Raises:
-            requests.exceptions.RequestException: If request fails
         """
         response = self.session.get(f"{self.base_url}/")
         response.raise_for_status()
         return response.json()
     
-    def reset(self) -> Dict[str, Any]:
+    def reset(self, task_id: Optional[str] = "medium") -> Dict[str, Any]:
         """
-        Reset the environment to initial state.
+        Reset the environment to initial state based on task.
         
+        Args:
+            task_id (Optional[str]): Task difficulty level.
+            
         Returns:
-            dict: Contains:
-                - state: Initial waste level (50)
-                - done: Whether episode is complete (False)
-                - message: Human-readable message
-        
-        Raises:
-            requests.exceptions.RequestException: If request fails
+            dict: Response containing state, done, task_id, message.
         """
-        response = self.session.post(f"{self.base_url}/reset")
+        response = self.session.post(
+            f"{self.base_url}/reset",
+            json={"task_id": task_id}
+        )
         response.raise_for_status()
         return response.json()
     
     def step(self, action: int) -> Dict[str, Any]:
         """
         Execute one step in the environment.
-        
-        Args:
-            action (int): Action to execute (0 or 1)
-                - 0: No action (waste increases)
-                - 1: Redistribute food (waste decreases)
-        
-        Returns:
-            dict: Contains:
-                - state: New waste level
-                - reward: Reward for this step
-                - done: Whether episode has terminated
-                - message: Human-readable message
-                - step_count: Current step count
-        
-        Raises:
-            requests.exceptions.RequestException: If request fails
-            ValueError: If invalid action
         """
         if action not in [0, 1]:
             raise ValueError(f"Invalid action: {action}. Expected 0 or 1.")
@@ -91,17 +71,6 @@ class FoodWasteClient:
     def get_info(self) -> Dict[str, Any]:
         """
         Get current environment information.
-        
-        Returns:
-            dict: Contains state information:
-                - current_waste_level: Current waste level
-                - max_waste: Maximum waste threshold
-                - min_waste: Minimum waste threshold
-                - step_count: Current step count
-                - done: Whether episode is done
-        
-        Raises:
-            requests.exceptions.RequestException: If request fails
         """
         response = self.session.get(f"{self.base_url}/info")
         response.raise_for_status()
@@ -109,13 +78,7 @@ class FoodWasteClient:
 
 
 def print_response(response: Dict[str, Any], title: str = ""):
-    """
-    Pretty print API response.
-    
-    Args:
-        response (dict): Response dictionary
-        title (str): Optional title for the response
-    """
+    """Pretty print API response."""
     if title:
         print(f"\n{'='*60}")
         print(f"{title}")
@@ -130,35 +93,28 @@ def main():
     print("Campus Food Waste RL Environment - Client Demo")
     print("=" * 60)
     
-    # Initialize client
     client = FoodWasteClient(base_url="http://localhost:8000")
     
     try:
-        # Health check
         print("\n[1] Checking API health...")
         health = client.health_check()
         print_response(health, "API Status")
         
-        # Reset environment
-        print("\n[2] Resetting environment...")
-        reset_response = client.reset()
+        task = "medium"
+        print(f"\n[2] Resetting environment (Task: {task})...")
+        reset_response = client.reset(task_id=task)
         print_response(reset_response, "Reset Response")
-        initial_state = reset_response["state"]
         
-        # Get environment info
         print("\n[3] Getting environment info...")
         info = client.get_info()
         print_response(info, "Environment Info")
         
-        # Run a few steps with random actions
         print("\n[4] Running 10 steps with alternating actions...")
         print("-" * 60)
         
         total_reward = 0
         for step_num in range(1, 11):
-            # Alternate between actions: no action (0), then redistribute (1)
             action = step_num % 2
-            
             response = client.step(action)
             total_reward += response["reward"]
             
@@ -173,7 +129,6 @@ def main():
         
         print(f"\nTotal reward accumulated: {total_reward}")
         
-        # Get final info
         print("\n[5] Final environment state...")
         final_info = client.get_info()
         print_response(final_info, "Final State")
@@ -183,7 +138,6 @@ def main():
         print("Make sure the server is running: python -m uvicorn server.app:app --reload")
     except requests.exceptions.RequestException as e:
         print(f"ERROR: {e}")
-
 
 if __name__ == "__main__":
     main()
