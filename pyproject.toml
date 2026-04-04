@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "campus-food-waste-env"
+version = "1.0.0"
+description = "A Reinforcement Learning environment for optimizing campus food waste"
+authors = [
+    {name = "AI Engineer", email = "engineer@example.com"}
+]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic",
+    "requests",
+    "numpy"
+]
