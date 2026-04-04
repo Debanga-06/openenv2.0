@@ -215,7 +215,7 @@ openenv/
 ### Step 1: Clone Repository
 
 ```bash
-git clone <repository_url>
+git clone https://github.com/subhadip758/openenv2.0.git
 cd openenv
 ```
 
