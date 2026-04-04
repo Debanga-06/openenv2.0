@@ -7,7 +7,7 @@ allowing agents to interact with the environment.
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from environment import FoodWasteEnv
 
 # Initialize FastAPI app
@@ -22,6 +22,11 @@ env = FoodWasteEnv()
 
 
 # Pydantic models for request/response validation
+class ResetRequest(BaseModel):
+    """Request model for reset endpoint."""
+    task_id: Optional[str] = Field(default="medium", description="Task identifier (easy, medium, hard)")
+
+
 class ActionRequest(BaseModel):
     """Request model for step endpoint."""
     action: int = Field(..., description="Action to take (0: no action, 1: redistribute food)", ge=0, le=1)
@@ -30,10 +35,119 @@ class ActionRequest(BaseModel):
 class ResetResponse(BaseModel):
     """Response model for reset endpoint."""
     state: int = Field(..., description="Initial food waste level")
+    task_id: str = Field(..., description="Task identifier used")
     done: bool = Field(..., description="Whether episode is complete")
     message: str = Field(..., description="Human-readable message")
 
 
+class StepResponse(BaseModel):
+    """Response model for step endpoint."""
+    state: int = Field(..., description="New food waste level")
+    reward: int = Field(..., description="Reward for this step")
+    done: bool = Field(..., description="Whether episode has terminated")
+    message: str = Field(..., description="Human-readable message")
+    step_count: int = Field(..., description="Current step count")
+
+
+class InfoResponse(BaseModel):
+    """Response model for info endpoint."""
+    data: Dict[str, Any] = Field(..., description="Current state information")
+
+
+# API Endpoints
+@app.get("/", tags=["Health"])
+async def root():
+    """Health check endpoint."""
+    return {
+        "status": "active",
+        "service": "Campus Food Waste RL Environment",
+        "version": "1.0.0"
+    }
+
+
+@app.post("/reset", response_model=ResetResponse, tags=["Environment"])
+async def reset(request: ResetRequest = ResetRequest()):
+    """
+    Reset the environment to initial state based on task.
+    
+    Returns:
+        ResetResponse: Initial state, task_id, and done flag
+    """
+    try:
+        state, done = env.reset(task_id=request.task_id)
+        return ResetResponse(
+            state=state,
+            task_id=request.task_id,
+            done=done,
+            message=f"Environment reset. Task: {request.task_id}, Starting waste level = {state}"
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/step", response_model=StepResponse, tags=["Environment"])
+async def step(request: ActionRequest):
+    """
+    Execute one step in the environment.
+    
+    Args:
+        request (ActionRequest): Contains the action to execute
+            - action 0: No action (waste increases)
+            - action 1: Redistribute food (waste decreases)
+    
+    Returns:
+        StepResponse: New state, reward, done flag, and metadata
+    
+    Raises:
+        HTTPException: If invalid action is provided
+    """
+    try:
+        state, reward, done = env.step(request.action)
+        
+        # Generate message based on action
+        action_name = "redistributed food" if request.action == 1 else "took no action"
+        reward_text = "positive" if reward > 0 else "negative" if reward < 0 else "neutral"
+        
+        message = f"Action {request.action} ({action_name}): waste level = {state}, reward = {reward} ({reward_text})"
+        
+        return StepResponse(
+            state=state,
+            reward=reward,
+            done=done,
+            message=message,
+            step_count=env.step_count
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/info", response_model=InfoResponse, tags=["Environment"])
+async def info():
+    """
+    Get current environment state information.
+    
+    Returns:
+        InfoResponse: Detailed state information
+    """
+    return InfoResponse(data=env.get_state_info())
+
+
+# Error handlers
+@app.exception_handler(ValueError)
+async def value_error_handler(request, exc):
+    """Handle ValueError exceptions."""
+    return {
+        "error": str(exc),
+        "status_code": 400
+    }
+
+
+def main():
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+if __name__ == "__main__":
+    main()
 class StepResponse(BaseModel):
     """Response model for step endpoint."""
     state: int = Field(..., description="New food waste level")
