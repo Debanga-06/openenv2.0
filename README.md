@@ -1,3 +1,12 @@
+---
+title: OpenEnv 2.0
+emoji: 🚀
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+---
+
 # Campus Food Waste RL Optimizer
 
 **A Reinforcement Learning Environment for Meta PyTorch OpenEnv Hackathon**
