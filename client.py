@@ -53,7 +53,7 @@ class FoodWasteClient:
         Raises:
             requests.exceptions.RequestException: If request fails
         """
-        response = self.session.get(f"{self.base_url}/reset")
+        response = self.session.post(f"{self.base_url}/reset")
         response.raise_for_status()
         return response.json()
     

@@ -59,7 +59,7 @@ async def root():
     }
 
 
-@app.get("/reset", response_model=ResetResponse, tags=["Environment"])
+@app.post("/reset", response_model=ResetResponse, tags=["Environment"])
 async def reset():
     """
     Reset the environment to initial state.
