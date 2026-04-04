@@ -1,0 +1,116 @@
+name: "campus-food-waste-env"
+version: "1.0.0"
+description: "A Reinforcement Learning environment for optimizing campus food waste through intelligent agent actions"
+
+author: "AI Engineer - Meta PyTorch OpenEnv Hackathon"
+license: "MIT"
+
+# Application entrypoint
+entrypoint: "server.app:app"
+
+# Server configuration
+server:
+  host: "0.0.0.0"
+  port: 8000
+  reload: true
+
+# Environment specification
+environment:
+  # State space definition
+  state_space:
+    type: "discrete"
+    min: 0
+    max: 100
+    description: "Food waste level in the campus (0-100)"
+  
+  # Action space definition
+  action_space:
+    type: "discrete"
+    num_actions: 2
+    actions:
+      - id: 0
+        name: "no_action"
+        description: "Take no action; food waste accumulates naturally"
+        effect: "waste increases by 2-5 units"
+      - id: 1
+        name: "redistribute_food"
+        description: "Redistribute excess food to students or food banks"
+        effect: "waste decreases by 3-8 units"
+  
+  # Reward specification
+  reward:
+    positive: 10
+    positive_reason: "Food waste decreased"
+    negative: -5
+    negative_reason: "Food waste increased"
+    neutral: 0
+    terminal_bonus: 20
+    terminal_penalty: -20
+  
+  # Episode termination conditions
+  terminal_conditions:
+    - condition: "waste_level <= 0"
+      description: "Successfully minimized waste to zero"
+      type: "success"
+    - condition: "waste_level > 100"
+      description: "Waste exceeded maximum threshold"
+      type: "failure"
+    - condition: "steps >= 100"
+      description: "Maximum episode length reached"
+      type: "timeout"
+
+# API endpoints
+endpoints:
+  reset:
+    method: "GET"
+    path: "/reset"
+    description: "Reset environment to initial state"
+    response:
+      state: "int (initial waste level = 50)"
+      done: "bool (False on reset)"
+  
+  step:
+    method: "POST"
+    path: "/step"
+    description: "Execute one step in the environment"
+    request:
+      action: "int (0 or 1)"
+    response:
+      state: "int (new waste level)"
+      reward: "int (reward for this step)"
+      done: "bool (episode terminated)"
+  
+  info:
+    method: "GET"
+    path: "/info"
+    description: "Get current environment state information"
+    response:
+      current_waste_level: "int"
+      max_waste: "int"
+      min_waste: "int"
+      step_count: "int"
+      done: "bool"
+  
+  health:
+    method: "GET"
+    path: "/"
+    description: "Health check endpoint"
+    response:
+      status: "str"
+      service: "str"
+      version: "str"
+
+# Dependencies
+dependencies:
+  - fastapi
+  - uvicorn
+  - pydantic
+  - requests
+  - numpy
+
+# Benchmarks and metrics
+benchmarks:
+  optimal_episode_length: "10-20 steps"
+  target_waste_level: "0"
+  average_reward_per_step: "8-10 (with optimal policy)"
+  success_rate_target: "80%"
