@@ -7,7 +7,7 @@ import argparse
 import requests
 from openai import OpenAI
 
-# ✅ Use hackathon's LiteLLM proxy
+
 client = OpenAI(
     base_url=os.environ["API_BASE_URL"],
     api_key=os.environ["API_KEY"]
@@ -24,6 +24,21 @@ def warmup_llm():
         print("[LLM] warmup success", flush=True)
     except Exception:
         print("[LLM] warmup failed", flush=True)
+
+
+def normalize_score(total_reward, steps, task):
+    """
+    Normalize total_reward to a score strictly in (0, 1).
+    Scores of exactly 0.0 or 1.0 will fail Phase 2 validation.
+    """
+    max_rewards = {"easy": 100, "medium": 80, "hard": 60}
+    max_possible = max_rewards.get(task, 100)
+
+    raw_score = max(0.0, min(float(total_reward), float(max_possible))) / max_possible
+
+    # Clamp strictly into (0, 1) — never exactly 0.0 or 1.0
+    score = max(0.001, min(raw_score, 0.999))
+    return round(score, 4)
 
 
 class LLMAgent:
@@ -48,7 +63,7 @@ class LLMAgent:
 
 
 def evaluate(url: str):
-    warmup_llm()  # ✅ GUARANTEED LLM call — proxy always detected
+    warmup_llm()  
 
     session = requests.Session()
     agent = LLMAgent()
@@ -64,7 +79,8 @@ def evaluate(url: str):
             done = reset_data.get("done", False)
         except Exception:
             print(f"[STEP] step=1 reward=0", flush=True)
-            print(f"[END] task={task} score=0 steps=1", flush=True)
+            score = 0.001  
+            print(f"[END] task={task} score={score} steps=1", flush=True)
             continue
 
         total_reward = 0
@@ -90,7 +106,8 @@ def evaluate(url: str):
             if steps > 100:
                 break
 
-        print(f"[END] task={task} score={total_reward} steps={steps}", flush=True)
+        score = normalize_score(total_reward, steps, task)  
+        print(f"[END] task={task} score={score} steps={steps}", flush=True)
 
 
 if __name__ == "__main__":
